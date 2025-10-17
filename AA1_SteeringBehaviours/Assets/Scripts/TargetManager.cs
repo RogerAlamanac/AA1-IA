@@ -4,7 +4,7 @@ public class TargetManager : MonoBehaviour
 {
     public Transform npc;
     public Transform target;
-    public Vector2 areaSize = new Vector2(8, 5); // àrea on es mourà el target
+    private Vector2 areaSize = new Vector2(10, 5); // àrea on es mourà el target
 
     private SteeringAgent agent;
     private CompositeSteering composite;
