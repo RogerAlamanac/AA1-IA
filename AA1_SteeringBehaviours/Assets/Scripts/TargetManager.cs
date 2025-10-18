@@ -1,39 +1,38 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 public class TargetManager : MonoBehaviour
 {
-    public Transform npc;
+    public List<Transform> npcs;
     public Transform player;
-    private Vector2 areaSize = new Vector2(10, 5); // àrea on es mourà el target
-
-    private SteeringAgent agent;
+    //private Vector2 areaSize = new Vector2(10, 5); // àrea on es mourà el target
+    private List<SteeringAgent> agents = new List<SteeringAgent>();
     private CompositeSteering composite;
     public float speed = 0.0f;
 
     void Start()
     {
-        agent = npc.GetComponent<SteeringAgent>();
+        // Configurar tots els agents
+        foreach (Transform npc in npcs)
+        {
+            SteeringAgent agent = npc.GetComponent<SteeringAgent>();
+            if (agent == null) continue;
 
-        // Afegim Seek i Arrive
-        composite = new CompositeSteering();
-        composite.AddBehavior(new Seek(player), 0.5f);
-        composite.AddBehavior(new Arrive(player, 2f), 1f);
+            CompositeSteering composite = new CompositeSteering();
+            composite.AddBehavior(new Seek(player), 0.4f);
+            composite.AddBehavior(new Arrive(player, 2f), 1f);
 
-        agent.SetBehavior(composite);
+            agent.SetBehavior(composite);
+            agents.Add(agent);
+        }
     }
 
     void Update()
     {
-        float distance = Vector2.Distance(npc.position, player.position);
         float horizontal = Input.GetAxis("Horizontal");
         float vertical  = Input.GetAxis("Vertical");
-
-        Vector3 movementDirection = new Vector3(horizontal,0, vertical);
+        //float distance = Vector2.Distance(npc.position, player.position);
+        Vector3 movementDirection = new Vector3(horizontal, vertical, 0);
         player.position += movementDirection * speed * Time.deltaTime;
-           
-        if (distance < 0.3f)
-        {
-            
-        }
     }
 }
