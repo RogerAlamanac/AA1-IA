@@ -5,7 +5,6 @@ using UnityEngine;
 public class Agent2D : MonoBehaviour
 {
 	// Agent “contenidor” del bucle de steering: Strategy/Composite com a proveïdor de la força resultant
-	// i integració F->a->v->x amb saturació per MaxForce/MaxSpeed (model clàssic de Reynolds).
 
 	[Header("Steering")]
 	public float MaxForce = 20f;
