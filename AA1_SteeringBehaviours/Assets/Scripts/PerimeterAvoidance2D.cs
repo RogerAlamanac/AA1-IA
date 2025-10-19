@@ -4,7 +4,10 @@ using UnityEngine;
 
 public class PerimeterAvoidance2D : MonoBehaviour, ISteeringBehavior
 {
-	public Rect area = new Rect(-10, -6, 20, 12); // x,y,width,height
+	// Containment: manté l’agent dins d’un perímetre rectangular aplicant forces de retorn
+	// quan s’apropa a les vores (barrier/region constraint).
+
+	public Rect area = new Rect(-10, -6, 20, 12);
 	public float border = 1.0f;
 
 	public Vector2 CalculateSteeringForce(Agent2D agent)

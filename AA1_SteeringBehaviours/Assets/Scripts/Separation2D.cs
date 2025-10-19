@@ -4,8 +4,9 @@ using UnityEngine;
 
 public class Separation2D : MonoBehaviour, ISteeringBehavior
 {
+	// Flocking—Separation: repulsió dins d’un radi veïnal, pesant més els propers (1/d^2).
 	public string neighborTag = "Zombie";
-	public float neighborRadius = 1.5f; // NEIGHBOR_RADIUS
+	public float neighborRadius = 1.5f;
 
 	public Vector2 CalculateSteeringForce(Agent2D agent)
 	{
@@ -23,7 +24,6 @@ public class Separation2D : MonoBehaviour, ISteeringBehavior
 			float d = toMe.magnitude;
 			if (d > 0 && d < neighborRadius)
 			{
-				// Inversa al cuadrado para repeler más fuerte al cercano
 				sum += toMe / (d * d);
 				count++;
 			}

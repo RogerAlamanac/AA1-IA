@@ -1,9 +1,13 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Net.NetworkInformation;
 using UnityEngine;
 
 public class PatrolBehavior2D : SteeringProvider
 {
+	// Patrulla autònoma: selecció estocàstica de waypoints dins d’un radi
+	// amb mostreig conscient d’obstacles i arribada suau (Arrive) + pauses (estats).
+
 	[Header("Zona de patrulla")]
 	public float patrolRadius = 6f;
 	public float minStep = 2f;
@@ -13,12 +17,12 @@ public class PatrolBehavior2D : SteeringProvider
 	public float stopRadius = 0.35f;
 
 	[Header("Detección de obstáculos (Raycast)")]
-	public LayerMask obstacleMask;          // capa "Obstacles"
-	public float wallCheckDistance = 1.2f;  // longitud del raycast frontal
+	public LayerMask obstacleMask;
+	public float wallCheckDistance = 1.2f;
 
 	[Header("Margen contra paredes para el destino")]
-	public float agentRadius = 0.45f;       // ~mitad del ancho del enemigo
-	public float goalObstacleMargin = 0.25f;// margen extra respecto a paredes
+	public float agentRadius = 0.45f;
+	public float goalObstacleMargin = 0.25f;
 
 	[Header("Espera")]
 	public float waitSeconds = 1.0f;
@@ -39,22 +43,22 @@ public class PatrolBehavior2D : SteeringProvider
 		if (agent == null) return Vector2.zero;
 		float now = Time.time;
 
-		// Espera dura: no moverse ni crear destinos
+		// FSM mínima: Moving/Waiting per introduir pauses i evitar oscil·lacions locals.
 		if (state == State.Waiting)
 		{
 			if (agent.Velocity.sqrMagnitude > 0f) agent.Velocity = Vector2.zero;
 			if (now < waitUntilTime) return Vector2.zero;
 
 			state = State.Moving;
-			hasTarget = false; // forzar nuevo destino al salir de la espera
+			hasTarget = false;
 		}
 
-		// Asegurar único destino activo
+		// Generació de destins “validats” (sampling amb restriccions ambientals).
 		if (!hasTarget) PickNewTarget(agent);
 
 		Vector2 pos = agent.transform.position;
 
-		// Raycast frontal: si hay pared, parar inmediato y entrar en espera (sin crear destino aquí)
+		// Percepció reactiva frontal: si hi ha bloqueig immediat, pausa (evita thrashing).
 		Vector2 dirMove = agent.Velocity.sqrMagnitude > 0.0001f
 			? agent.Velocity.normalized
 			: (hasTarget ? (currentTarget - pos).normalized : lastMoveDir);
@@ -68,7 +72,7 @@ public class PatrolBehavior2D : SteeringProvider
 			return Vector2.zero;
 		}
 
-		// Llegada al destino: parar y esperar
+		// Arrive: modulació de velocitat per arribar suau al waypoint.
 		Vector2 to = currentTarget - pos;
 		float dist = to.magnitude;
 		if (dist <= stopRadius)
@@ -77,7 +81,6 @@ public class PatrolBehavior2D : SteeringProvider
 			return Vector2.zero;
 		}
 
-		// Arrive estándar
 		float desiredSpeed = agent.MaxSpeed;
 		if (dist < slowingRadius)
 			desiredSpeed = agent.MaxSpeed * (dist / Mathf.Max(0.001f, slowingRadius));
@@ -86,7 +89,7 @@ public class PatrolBehavior2D : SteeringProvider
 		Vector2 steering = (desiredVel - agent.Velocity) / Mathf.Max(agent.MaxSpeed, 0.0001f);
 		steering *= agent.MaxForce;
 
-		// Recordar una dirección razonable para el próximo frame
+		// Memòria direccional per estabilitzar la percepció quan v es aproximadament igual a 0.
 		if (agent.Velocity.sqrMagnitude > 0.0001f)
 			lastMoveDir = agent.Velocity.normalized;
 		else if (dist > 0.0001f)
@@ -97,29 +100,28 @@ public class PatrolBehavior2D : SteeringProvider
 
 	private void EnterWait(float now, Agent2D agent)
 	{
-		agent.Velocity = Vector2.zero;   // cortar inercia
+		// Tall d’inèrcia + transició d’estat (política de descans de patrulla).
+		agent.Velocity = Vector2.zero;
 		state = State.Waiting;
 		waitUntilTime = now + waitSeconds;
-		hasTarget = false;               // invalidar destino actual
+		hasTarget = false;
 	}
 
 	private void PickNewTarget(Agent2D agent)
 	{
+		// Selecció de waypoint amb “gating” geomètric: marge a obstacles i línia clara.
 		Vector2 center = agent.transform.position;
 		float clearance = Mathf.Max(0.01f, agentRadius + goalObstacleMargin);
 
-		// Buscar un punto válido: margen a paredes + línea directa libre
 		for (int i = 0; i < 20; i++)
 		{
 			float r = Random.Range(minStep, patrolRadius);
 			float ang = Random.Range(0f, Mathf.PI * 2f);
 			Vector2 candidate = center + new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * r;
 
-			// 1) margen suficiente respecto a obstáculos
 			if (Physics2D.OverlapCircle(candidate, clearance, obstacleMask) != null)
 				continue;
 
-			// 2) línea directa libre desde el agente
 			Vector2 dir = candidate - center;
 			float d = dir.magnitude;
 			if (d < minStep) continue;
@@ -133,12 +135,13 @@ public class PatrolBehavior2D : SteeringProvider
 			return;
 		}
 
-		// si no encuentra, reintenta en el siguiente frame
+		// Reintenta al següent tick si no hi ha candidat (robustesa).
 		hasTarget = false;
 	}
 
 	void OnDrawGizmos()
 	{
+		// Diagnòstic visual del “goal” actiu (estil depuració de steering).
 		if (state == State.Moving && hasTarget)
 		{
 			Gizmos.color = targetColor;
@@ -147,19 +150,17 @@ public class PatrolBehavior2D : SteeringProvider
 		}
 	}
 
-	// Llamar cuando el zombie entra en persecución
+	// Hooks per coordinar amb la FSM externa (persecució vs patrulla).
 	public void OnChaseStart()
 	{
-		// elimina cualquier destino previo y sale de cualquier estado de espera
 		hasTarget = false;
 		state = State.Moving;
 		waitUntilTime = -1f;
 	}
 
-	// (opcional) por si quieres limpiar también al terminar la persecución
 	public void OnChaseEnd()
 	{
-		hasTarget = false;      // forzar que al volver a patrullar escoja uno nuevo
+		hasTarget = false;
 		state = State.Moving;
 	}
 }

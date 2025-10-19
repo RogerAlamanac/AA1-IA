@@ -5,12 +5,14 @@ using UnityEngine;
 [System.Serializable]
 public struct BehaviorWeight
 {
-	public MonoBehaviour behavior; // debe implementar ISteeringBehavior
+	public MonoBehaviour behavior; // ISteeringBehavior
 	[Range(0f, 5f)] public float weight;
 }
 
 public class WeightedBlendComposite : SteeringProvider
 {
+	// Mescla lineal ponderada: integra múltiples objectius compatibles i delega el truncament a l’agent.
+
 	public BehaviorWeight[] entries;
 
 	public override Vector2 CalculateSteeringForce(Agent2D agent)
@@ -26,6 +28,6 @@ public class WeightedBlendComposite : SteeringProvider
 			total += f * entries[i].weight;
 		}
 
-		return total; // el Agent2D hará Accel = total/Mass y truncará vel.
+		return total;
 	}
 }

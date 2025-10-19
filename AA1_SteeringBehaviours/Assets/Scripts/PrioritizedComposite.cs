@@ -6,16 +6,19 @@ using UnityEngine;
 public class SteeringGroup
 {
 	public string name;
-	public BehaviorWeight[] entries; // se mezclan con Weighted Blending interno
+	public BehaviorWeight[] entries; // mescla interna per pesos (blending)
 }
 
 public class PrioritizedComposite : SteeringProvider
 {
+	// Arbitration per prioritats: es combinen pesos dins de cada grup i s’accepta
+	// el primer grup que supera un llindar (inhibició de grups inferiors).
+
 	[Header("Grupos de mayor a menor prioridad")]
 	public SteeringGroup[] groups;
 
 	[Header("Umbral para aceptar un grupo")]
-	public float priorityThreshold = 0.1f; // K_PRIORITY_THRESHOLD
+	public float priorityThreshold = 0.1f;
 
 	public override Vector2 CalculateSteeringForce(Agent2D agent)
 	{
@@ -23,7 +26,7 @@ public class PrioritizedComposite : SteeringProvider
 		{
 			Vector2 blended = Vector2.zero;
 
-			// Weighted Blending interno del grupo (mismo que en slides)
+			// Blending intragrup (equilibra objectius compatibles dins la mateixa capa).
 			var entries = groups[g].entries;
 			for (int i = 0; i < entries.Length; i++)
 			{
@@ -34,7 +37,7 @@ public class PrioritizedComposite : SteeringProvider
 			}
 
 			if (blended.magnitude > priorityThreshold)
-				return blended; // devolver y cortar (arbitration por prioridad)
+				return blended; // guanya el grup prioritari (resolució de conflictes)
 		}
 
 		return Vector2.zero;

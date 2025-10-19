@@ -4,8 +4,11 @@ using UnityEngine;
 
 public class CollisionAvoidance2D : MonoBehaviour, ISteeringBehavior
 {
-	public string neighborTag = "Zombie"; // o “Agent”
-	public float coneAngle = 60f;         // grados
+	// COLLISION AVOIDANCE (entorn dinàmic): selecció del “conflicte crític” dins d’un con frontal
+	// i resposta reactiva tipus Flee; evita xocs locals sense perdre l’objectiu global.
+
+	public string neighborTag = "Zombie";
+	public float coneAngle = 60f;
 	public float coneDistance = 3.0f;
 
 	public Vector2 CalculateSteeringForce(Agent2D agent)
@@ -39,7 +42,6 @@ public class CollisionAvoidance2D : MonoBehaviour, ISteeringBehavior
 
 		if (nearest == null) return Vector2.zero;
 
-		// FLEE del más cercano (estructura de clase)
 		Vector2 desired = (pos - (Vector2)nearest.position).normalized * agent.MaxSpeed;
 		Vector2 steering = (desired - agent.Velocity) / Mathf.Max(agent.MaxSpeed, 0.0001f);
 		steering *= agent.MaxForce;
